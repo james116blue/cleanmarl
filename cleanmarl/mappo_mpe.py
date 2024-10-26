@@ -244,7 +244,7 @@ if __name__ == "__main__":
             next_state = next_obs.reshape(args.num_envs // envs.num_agents, -1).repeat(envs.num_agents, axis=0)
             next_done = np.logical_or(terminations, truncations)
             #compute reward stat
-            episode_rewards += reward * envs.num_agents  # LAME stats   , multipply by agents number for comaprision with HARL paper
+            episode_rewards += reward # * envs.num_agents  # LAME stats   , multipply by agents number for comaprision with HARL paper
             if np.any(next_done):
                 writer.add_scalar(f"charts/average_per_player_episodic_return", np.mean(episode_rewards * next_done), global_step)
                 writer.add_scalar(f"charts/episodic_length", np.mean(episode_lengths * next_done), global_step)
@@ -254,12 +254,12 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_state, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_state).to(device), torch.Tensor(next_done).to(device)
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+            # if "final_info" in infos:
+            #     for info in infos["final_info"]:
+            #         if info and "episode" in info:
+            #             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+            #             writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+            #             writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
         # if args.use_value_normalization:
         #     values = values * torch.sqrt(var) + mean
