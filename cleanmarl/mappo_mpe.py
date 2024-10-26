@@ -37,7 +37,7 @@ class Args:
     # Algorithm specific arguments
     use_ReLU: bool = True
     """use Relu deafault or Tanh"""
-    use_huber_loss: bool = False
+    use_huber_loss: bool = True
     """use huber loss or MSE"""
     huber_delta: float = 10.
     """coefficience of huber loss."""
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     # env setup
     import importlib
     import supersuit as ss
-    env = importlib.import_module(f"pettingzoo.mpe.{args.env_id}").parallel_env(N=3)
+    env = importlib.import_module(f"pettingzoo.mpe.{args.env_id}").parallel_env()
     # env = ss.agent_indicator_v0(env, type_only=False)
     envs = ss.pettingzoo_env_to_vec_env_v1(env)
     envs = ss.concat_vec_envs_v1(envs, args.num_envs , num_cpus=0, base_class="gymnasium")
@@ -261,13 +261,14 @@ if __name__ == "__main__":
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
-        if args.use_value_normalization:
-            values = values * torch.sqrt(var) + mean
-            assert values.requires_grad==False
+        # if args.use_value_normalization:
+        #     values = values * torch.sqrt(var) + mean
+        #     assert values.requires_grad==False
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_state).reshape(1, -1)
             if args.use_value_normalization:
+                values = values * torch.sqrt(var) + mean
                 next_value = next_value * torch.sqrt(var) + mean
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
@@ -323,13 +324,17 @@ if __name__ == "__main__":
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if args.use_value_normalization:
-                    #update
-                    running_mean = weight * running_mean + (1 - weight) * b_returns[mb_inds].mean()
-                    running_mean_sq = weight * running_mean_sq + (1 - weight) * (b_returns[mb_inds] ** 2).mean()
-                    debiasing_term = weight * debiasing_term + (1 - weight) * 1.0
-                    mean = running_mean / debiasing_term.clamp(min=1e-5)
-                    mean_sq = running_mean_sq / debiasing_term.clamp(min=1e-5)
-                    var = (mean_sq - mean ** 2).clamp(min=1e-2)
+                    with torch.no_grad():
+                        #update
+                        old_mean = running_mean / debiasing_term.clamp(min=1e-5)
+                        running_mean = weight * running_mean + (1 - weight) * b_returns[mb_inds].mean()
+                        running_mean_sq = weight * running_mean_sq + (1 - weight) * (b_returns[mb_inds] ** 2).mean()
+                        debiasing_term = weight * debiasing_term + (1 - weight) * 1.0
+                        mean = running_mean / debiasing_term.clamp(min=1e-5)
+                        mean_sq = running_mean_sq / debiasing_term.clamp(min=1e-5)
+                        var = (mean_sq - mean ** 2).clamp(min=1e-2)
+                        # var = weight * (var + (1 - weight) ((b_returns[mb_inds] - old_mean)**2).mean())
+                        # var = var.clamp(min=1e-2)
                     #normalize
                     target_values = (b_returns[mb_inds] - mean) / torch.sqrt(var)
                 else:
