@@ -13,7 +13,7 @@ CleanMARL is a Deep MultiAgent Reinforcement Learning library that provides high
 | ✅ [MultiAgent Proximal Policy Gradient (MAPPO)](https://arxiv.org/pdf/2103.01955) | [`mappo_mpe.py`](https://github.com/james116blue/cleanmarl/blob/master/cleanmarl/mappo_mpe.py) |
 |                                                                                   |  
 
-![reward on mpe simple_spread_v3 env](https://github.com/james116blue/cleanmarl/blob/master/cleanmarl/doc/reward_pot.png)
+![reward on mpe simple_spread_v3 env](https://github.com/james116blue/cleanmarl/blob/master/doc/reward_pot.png)
 
 ##### Implementation features
 1. Env state based on concatanation of local observations as input to critic
