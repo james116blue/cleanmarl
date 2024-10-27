@@ -43,9 +43,11 @@ class Args:
     """coefficience of huber loss."""
     use_value_normalization: bool = True
     """should be returns to go normalized to decrease variation"""
+    ewa_weigth: float = 0.999999
+    """weight used for exponential moving average"""
     env_id: str = "simple_spread_v3"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 100000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -59,9 +61,9 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 4
+    num_minibatches: int = 1
     """the number of mini-batches"""
-    update_epochs: int = 4
+    update_epochs: int = 15
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -71,7 +73,7 @@ class Args:
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
     ent_coef: float = 0.01
     """coefficient of the entropy"""
-    vf_coef: float = 0.5
+    vf_coef: float = 2.0
     """coefficient of the value function"""
     max_grad_norm: float = 10.
     """the maximum norm for the gradient clipping"""
@@ -87,28 +89,30 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
+def layer_init(layer, bias_const=0.0):
+    assert args.use_ReLU is not None
+    gain = nn.init.calculate_gain(['tanh', 'relu'][args.use_ReLU])
+    nn.init.orthogonal_(layer.weight, gain)
+    nn.init.constant_(layer.bias, bias_const)
     return layer
-
 
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
+        active_func = [nn.Tanh(), nn.ReLU()][args.use_ReLU]
         self.critic = nn.Sequential(
             layer_init(nn.Linear(np.array(envs.state_space.shape).prod(), 64)),
-            nn.Tanh(),
+            active_func,
             layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
+            active_func,
+            layer_init(nn.Linear(64, 1)),
         )
         self.actor = nn.Sequential(
             layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            nn.Tanh(),
+            active_func,
             layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
+            active_func,
+            layer_init(nn.Linear(64, envs.single_action_space.n)),
         )
 
     def get_value(self, s):
@@ -210,7 +214,6 @@ if __name__ == "__main__":
     episode_lengths = np.zeros(args.num_envs )
 
     if args.use_value_normalization:
-        weight = 0.99999
         running_mean = torch.zeros(size=(1,)).to(device)
         running_mean_sq = torch.zeros(size=(1,)).to(device)
         debiasing_term = torch.zeros(size=(1,)).to(device)
@@ -247,6 +250,7 @@ if __name__ == "__main__":
             episode_rewards += reward # * envs.num_agents  # LAME stats   , multipply by agents number for comaprision with HARL paper
             if np.any(next_done):
                 writer.add_scalar(f"charts/average_per_player_episodic_return", np.mean(episode_rewards * next_done), global_step)
+                writer.add_scalar(f"charts/share_episodic_return", np.mean(envs.num_envs * episode_rewards * next_done), global_step)
                 writer.add_scalar(f"charts/episodic_length", np.mean(episode_lengths * next_done), global_step)
                 episode_rewards[next_done] = 0
                 episode_lengths[next_done] = 0
@@ -254,17 +258,6 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_state, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_state).to(device), torch.Tensor(next_done).to(device)
 
-            # if "final_info" in infos:
-            #     for info in infos["final_info"]:
-            #         if info and "episode" in info:
-            #             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-            #             writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-            #             writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-
-        # if args.use_value_normalization:
-        #     values = values * torch.sqrt(var) + mean
-        #     assert values.requires_grad==False
-        # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_state).reshape(1, -1)
             if args.use_value_normalization:
@@ -326,15 +319,12 @@ if __name__ == "__main__":
                 if args.use_value_normalization:
                     with torch.no_grad():
                         #update
-                        old_mean = running_mean / debiasing_term.clamp(min=1e-5)
-                        running_mean = weight * running_mean + (1 - weight) * b_returns[mb_inds].mean()
-                        running_mean_sq = weight * running_mean_sq + (1 - weight) * (b_returns[mb_inds] ** 2).mean()
-                        debiasing_term = weight * debiasing_term + (1 - weight) * 1.0
+                        running_mean = args.ewa_weigth * running_mean + (1 - args.ewa_weigth) * b_returns[mb_inds].mean()
+                        running_mean_sq = args.ewa_weigth * running_mean_sq + (1 - args.ewa_weigth) * (b_returns[mb_inds] ** 2).mean()
+                        debiasing_term = args.ewa_weigth * debiasing_term + (1 - args.ewa_weigth) * 1.0
                         mean = running_mean / debiasing_term.clamp(min=1e-5)
                         mean_sq = running_mean_sq / debiasing_term.clamp(min=1e-5)
                         var = (mean_sq - mean ** 2).clamp(min=1e-2)
-                        # var = weight * (var + (1 - weight) ((b_returns[mb_inds] - old_mean)**2).mean())
-                        # var = var.clamp(min=1e-2)
                     #normalize
                     target_values = (b_returns[mb_inds] - mean) / torch.sqrt(var)
                 else:
