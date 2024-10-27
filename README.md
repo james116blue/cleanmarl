@@ -18,10 +18,24 @@ CleanMARL is a Deep MultiAgent Reinforcement Learning library that provides high
 3. Value normalization 
 
 Authors don`t elaborate on math related to value normalization, but actualy it was done in the next manner (clip on minimum value to exclude zeros omitted)
-$$\text{mean} = \mathop{\mathbb{E}}[R]$$
-$$\text{mean_sq} = \mathop{\mathbb{E}}[R^2]$$
-$$\beta\text{-debiasing term } $$
-$$\text{mean}_t = w*\text{mean}_{t-1} + (1-w)*\text{minibatch.mean()}$$
-$$\text{mean_sq}_t =w*\text{mean}_{t-1} + (1-w)*\text{minibatch.mean()}^2$$
-$$\beta_t=w\beta_{t-1} + (1-w)*1$$
-$$v_\text{normalized} = \frac{v - \text{mean}/\beta}{\text{mean_sq}/\beta- \text{mean}^2}$$
+```math
+``\text{mean} = \mathop{\mathbb{E}}[R]
+```
+```math
+\text{mean_sq} = \mathop{\mathbb{E}}[R^2]$$
+```
+```math
+\beta\text{-debiasing term } 
+```
+```math
+\text{mean}_t = w*\text{mean}_{t-1} + (1-w)*\text{minibatch.mean()}
+```
+```math
+\text{mean_sq}_t =w*\text{mean}_{t-1} + (1-w)*\text{minibatch.mean()}^2
+```
+```math
+\beta_t=w\beta_{t-1} + (1-w)*1
+```
+```math
+v_\text{normalized} = \frac{v - \text{mean}/\beta}{\text{mean_sq}/\beta- \text{mean}^2}$$
+```
