@@ -22,7 +22,7 @@ Authors don`t elaborate on math related to value normalization, but actualy it w
 \text{mean} = \mathop{\mathbb{E}}[R]
 ```
 ```math
-\text{meansq} = \mathop{\mathbb{E}}[R^2]$$
+\text{meansq} = \mathop{\mathbb{E}}[R^2]
 ```
 ```math
 \beta\text{-debiasing term } 
@@ -37,5 +37,5 @@ Authors don`t elaborate on math related to value normalization, but actualy it w
 \beta_t=w\beta_{t-1} + (1-w)*1
 ```
 ```math
-v_\text{normalized} = \frac{v - \text{mean}/\beta}{\text{meansq}/\beta- \text{mean}^2}$$
+v_\text{normalized} = \frac{v - \text{mean}/\beta}{\text{meansq}/\beta- \text{mean}^2}
 ```
