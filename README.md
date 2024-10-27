@@ -19,7 +19,7 @@ CleanMARL is a Deep MultiAgent Reinforcement Learning library that provides high
 
 Authors don`t elaborate on math related to value normalization, but actualy it was done in the next manner (clip on minimum value to exclude zeros omitted)
 ```math
-``\text{mean} = \mathop{\mathbb{E}}[R]
+\text{mean} = \mathop{\mathbb{E}}[R]
 ```
 ```math
 \text{mean_sq} = \mathop{\mathbb{E}}[R^2]$$
