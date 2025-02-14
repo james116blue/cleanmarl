@@ -20,7 +20,7 @@ CleanMARL is a Deep MultiAgent Reinforcement Learning library that provides high
 2. Huber loss for critic (value) network
 3. Value normalization 
 
-Authors don`t elaborate on math related to value normalization, but actualy it was done in the next manner (clip on minimum value to exclude zeros omitted)
+Authors don`t elaborate on math related to value normalization, but actualy it was done in the  next manner, similar to Adam, excluding bias correction term updating way (clip on minimum value to exclude zeros omitted):
 ```math
 \text{mean} = \mathop{\mathbb{E}}[R]
 ```
