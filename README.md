@@ -42,3 +42,4 @@ Authors don`t elaborate on math related to value normalization, but actualy it w
 ```math
 v_\text{normalized} = \frac{v - \text{mean}/\beta}{\text{meansq}/\beta- \text{mean}^2}
 ```
+Some non-useful information
